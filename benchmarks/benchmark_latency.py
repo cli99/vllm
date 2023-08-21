@@ -23,6 +23,7 @@ def main(args: argparse.Namespace):
         max_num_batched_tokens=args.batch_size * args.input_len,
         trust_remote_code=args.trust_remote_code,
         use_dummy_weights=args.use_dummy_weights,
+        dtype="float16",
     )
 
     sampling_params = SamplingParams(
@@ -52,12 +53,21 @@ def main(args: argparse.Namespace):
         return latency
 
     print("Warming up...")
-    run_to_completion(profile=False)
+    try:
+        run_to_completion(profile=False)
+    except RuntimeError as e:
+        print(e)
+        exit(1)
 
     # Benchmark.
     latencies = []
     for _ in tqdm(range(args.num_iters), desc="Profiling iterations"):
         latencies.append(run_to_completion(profile=False))
+
+    if args.output_file:
+        with open(args.output_file, 'a') as f:
+            avg_latency = np.mean(latencies)
+            f.write(f'{args.batch_size}, {args.input_len}, {args.output_len}, {avg_latency}\n')
     print(f'Avg latency: {np.mean(latencies)} seconds')
 
 
@@ -81,5 +91,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-dummy-weights',
                         action='store_true',
                         help='use dummy values for model weights')
+    parser.add_argument('--output-file',
+                        type=str, default=None,
+                        help='output to file')
     args = parser.parse_args()
     main(args)
