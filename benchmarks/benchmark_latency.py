@@ -6,7 +6,9 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from utils import add_model_hooks, remove_model_hooks, set_model_stage
-from vllm import LLM, SamplingParams
+from vllm import LLM, SamplingParams, EngineArgs
+from vllm.utils import see_memory_usage
+from vllm.engine.llm_engine import logger
 
 def main(args: argparse.Namespace):
     print(args)
@@ -26,8 +28,11 @@ def main(args: argparse.Namespace):
         disable_log_stats=False,
     )
 
-    model = llm.llm_engine.workers[0].model
-    add_model_hooks(model)
+    see_memory_usage(logger, "after LLM")
+
+    if args.tensor_parallel_size == 1:
+        model = llm.llm_engine.workers[0].model
+        add_model_hooks(model)
 
     sampling_params = SamplingParams(
         n=args.n,
@@ -44,19 +49,23 @@ def main(args: argparse.Namespace):
         if profile:
             torch.cuda.cudart().cudaProfilerStart()
 
-        set_model_stage(model, "prefill")
+        if args.tensor_parallel_size == 1:
+            set_model_stage(model, "prefill")
+        see_memory_usage(logger, "before generate")
 
         start_time = time.time()
         llm.generate(prompt_token_ids=dummy_prompt_token_ids,
                      sampling_params=sampling_params,
                      use_tqdm=False)
+        see_memory_usage(logger, "after generate")
 
         torch.cuda.synchronize()
         end_time = time.time()
         latency = end_time - start_time
         if profile:
             torch.cuda.cudart().cudaProfilerStop()
-        return latency, model.__duration__
+        return latency, model.__duration__ if args.tensor_parallel_size == 1 else 0
+
 
 
     print("Warming up...")
@@ -70,7 +79,8 @@ def main(args: argparse.Namespace):
         total_latencies.append(t1)
         prompt_latencies.append(t2)
 
-    remove_model_hooks(model)
+    if args.tensor_parallel_size == 1:
+        remove_model_hooks(model)
 
     avg_total_latency = np.mean(total_latencies)
     avg_prompt_latency = np.mean(prompt_latencies)
@@ -103,5 +113,10 @@ if __name__ == '__main__':
     parser.add_argument('--output-file',
                         type=str, default=None,
                         help='output to file')
+    parser.add_argument('--gpu-memory-utilization',
+                        type=float,
+                        default=EngineArgs.gpu_memory_utilization,
+                        help='the percentage of GPU memory to be used for'
+                        'the model executor')
     args = parser.parse_args()
     main(args)

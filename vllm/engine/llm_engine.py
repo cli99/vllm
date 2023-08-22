@@ -14,7 +14,7 @@ from vllm.sampling_params import SamplingParams
 from vllm.sequence import Sequence, SequenceGroup, SequenceStatus
 from vllm.transformers_utils.tokenizer import (detokenize_incrementally,
                                                get_tokenizer)
-from vllm.utils import Counter
+from vllm.utils import Counter, see_memory_usage
 
 if ray:
     from ray.air.util.torch_dist import init_torch_dist_process_group
@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 logger = init_logger(__name__)
 
 _LOGGING_INTERVAL_SEC = 5
-
 
 class LLMEngine:
     """An LLM engine that receives requests and generates texts.
@@ -100,8 +99,12 @@ class LLMEngine:
         else:
             self._init_workers(distributed_init_method)
 
+        see_memory_usage(logger, "before _init_cache")
+
         # Profile the memory usage and initialize the cache.
         self._init_cache()
+
+        see_memory_usage(logger, "after _init_cache")
 
         # Create the scheduler.
         self.scheduler = Scheduler(scheduler_config, cache_config)
