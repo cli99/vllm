@@ -8,7 +8,6 @@ from tqdm import tqdm
 from utils import add_model_hooks, remove_model_hooks, set_model_stage
 from vllm import LLM, SamplingParams
 
-
 def main(args: argparse.Namespace):
     print(args)
 
@@ -24,10 +23,10 @@ def main(args: argparse.Namespace):
         trust_remote_code=args.trust_remote_code,
         use_dummy_weights=args.use_dummy_weights,
         dtype="float16",
+        disable_log_stats=False,
     )
 
     model = llm.llm_engine.workers[0].model
-
     add_model_hooks(model)
 
     sampling_params = SamplingParams(
@@ -61,11 +60,7 @@ def main(args: argparse.Namespace):
 
 
     print("Warming up...")
-    try:
-        run_to_completion(profile=False)
-    except RuntimeError as e:
-        print(e)
-        exit(1)
+    print(run_to_completion(profile=False))
 
     # Benchmark.
     total_latencies = []

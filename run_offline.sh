@@ -19,8 +19,8 @@ TOKENIZER=${MODEL_NAME}
 #     --num-prompts 10 \
 #     --trust-remote-code --seed 0
 
-for i in 1 2 4 8 16 32 64; do
-# for i in 1; do
+# for i in 1 2 4 8 16 32 64; do
+for i in 64; do
     echo "Running latency benchmark for batch size ${i}"
     TOKENIZERS_PARALLELISM=true python3 benchmarks/benchmark_latency.py \
         --model $MODEL_NAME \
@@ -30,7 +30,7 @@ for i in 1 2 4 8 16 32 64; do
         --input-len 128 \
         --output-len 128 \
         --batch-size ${i} \
-        --num-iters 3 \
+        --num-iters 1 \
         --use-dummy-weights \
         --trust-remote-code \
         --output-file "latency_llama-2-7b.csv"
