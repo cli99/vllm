@@ -23,18 +23,18 @@ OUTPUT_FILE="latency_llama-2-13b.csv"
 
 # export 'PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512'
 
-# for i in 1 2 4 8 16 32 64; do
-for i in 1; do
+for i in 1 2 4 8 16 32 64; do
+# for i in 64; do
     echo "Running latency benchmark for batch size ${i}"
     TOKENIZERS_PARALLELISM=true python3 benchmarks/benchmark_latency.py \
         --model $MODEL_NAME \
         --tokenizer $TOKENIZER \
-        --tensor-parallel-size 2 \
+        --tensor-parallel-size 4 \
         --n 1 \
         --input-len 128 \
         --output-len 128 \
         --batch-size ${i} \
-        --num-iters 1 \
+        --num-iters 3 \
         --trust-remote-code \
         --gpu-memory-utilization 0.9 \
         --output-file ${OUTPUT_FILE}

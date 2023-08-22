@@ -47,9 +47,6 @@ def in_wsl() -> bool:
 import gc
 import psutil
 
-torch_memory_reserved = torch.cuda.memory_reserved
-torch_max_memory_reserved = torch.cuda.max_memory_reserved
-
 def see_memory_usage(logger, message):
     # python doesn't do real-time garbage collection so do it explicitly to get the correct RAM reports
     gc.collect()
@@ -58,8 +55,8 @@ def see_memory_usage(logger, message):
     logger.info(message)
     logger.info(f"MA {round(torch.cuda.memory_allocated() / (1024 * 1024 * 1024),2 )} GB \
         Max_MA {round(torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024),2)} GB \
-        CA {round(torch_memory_reserved() / (1024 * 1024 * 1024),2)} GB \
-        Max_CA {round(torch_max_memory_reserved() / (1024 * 1024 * 1024))} GB ")
+        CA {round(torch.cuda.memory_reserved() / (1024 * 1024 * 1024),2)} GB \
+        Max_CA {round(torch.cuda.max_memory_reserved() / (1024 * 1024 * 1024))} GB ")
 
     vm_stats = psutil.virtual_memory()
     used_GB = round(((vm_stats.total - vm_stats.available) / (1024**3)), 2)

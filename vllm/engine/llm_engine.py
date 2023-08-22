@@ -99,12 +99,8 @@ class LLMEngine:
         else:
             self._init_workers(distributed_init_method)
 
-        see_memory_usage(logger, "before _init_cache")
-
         # Profile the memory usage and initialize the cache.
         self._init_cache()
-
-        see_memory_usage(logger, "after _init_cache")
 
         # Create the scheduler.
         self.scheduler = Scheduler(scheduler_config, cache_config)

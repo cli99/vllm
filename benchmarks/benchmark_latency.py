@@ -28,8 +28,6 @@ def main(args: argparse.Namespace):
         disable_log_stats=False,
     )
 
-    see_memory_usage(logger, "after LLM")
-
     if args.tensor_parallel_size == 1:
         model = llm.llm_engine.workers[0].model
         add_model_hooks(model)
@@ -51,15 +49,12 @@ def main(args: argparse.Namespace):
 
         if args.tensor_parallel_size == 1:
             set_model_stage(model, "prefill")
-        see_memory_usage(logger, "before generate")
 
         start_time = time.time()
         llm.generate(prompt_token_ids=dummy_prompt_token_ids,
                      sampling_params=sampling_params,
                      use_tqdm=False)
-        see_memory_usage(logger, "after generate")
 
-        torch.cuda.synchronize()
         end_time = time.time()
         latency = end_time - start_time
         if profile:
