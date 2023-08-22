@@ -5,7 +5,7 @@ import time
 import numpy as np
 import torch
 from tqdm import tqdm
-
+from utils import add_model_hooks, remove_model_hooks, set_model_stage
 from vllm import LLM, SamplingParams
 
 
@@ -26,6 +26,10 @@ def main(args: argparse.Namespace):
         dtype="float16",
     )
 
+    model = llm.llm_engine.workers[0].model
+
+    add_model_hooks(model)
+
     sampling_params = SamplingParams(
         n=args.n,
         temperature=0.0 if args.use_beam_search else 1.0,
@@ -40,17 +44,21 @@ def main(args: argparse.Namespace):
     def run_to_completion(profile: bool = False):
         if profile:
             torch.cuda.cudart().cudaProfilerStart()
-        start_time = time.time()
 
+        set_model_stage(model, "prefill")
+
+        start_time = time.time()
         llm.generate(prompt_token_ids=dummy_prompt_token_ids,
                      sampling_params=sampling_params,
                      use_tqdm=False)
 
+        torch.cuda.synchronize()
         end_time = time.time()
         latency = end_time - start_time
         if profile:
             torch.cuda.cudart().cudaProfilerStop()
-        return latency
+        return latency, model.__duration__
+
 
     print("Warming up...")
     try:
@@ -60,15 +68,21 @@ def main(args: argparse.Namespace):
         exit(1)
 
     # Benchmark.
-    latencies = []
+    total_latencies = []
+    prompt_latencies = []
     for _ in tqdm(range(args.num_iters), desc="Profiling iterations"):
-        latencies.append(run_to_completion(profile=False))
+        t1, t2 = run_to_completion(profile=False)
+        total_latencies.append(t1)
+        prompt_latencies.append(t2)
 
+    remove_model_hooks(model)
+
+    avg_total_latency = np.mean(total_latencies)
+    avg_prompt_latency = np.mean(prompt_latencies)
     if args.output_file:
         with open(args.output_file, 'a') as f:
-            avg_latency = np.mean(latencies)
-            f.write(f'{args.batch_size}, {args.input_len}, {args.output_len}, {avg_latency}\n')
-    print(f'Avg latency: {np.mean(latencies)} seconds')
+            f.write(f'{args.batch_size}, {args.input_len}, {args.output_len}, {avg_total_latency}, {avg_prompt_latency}\n')
+    print(f'Avg total latency: {avg_total_latency} seconds, Avg prompt latency: {np.mean(avg_prompt_latency)}')
 
 
 if __name__ == '__main__':
