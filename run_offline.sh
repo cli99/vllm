@@ -7,8 +7,8 @@
 # MODEL_NAME=NousResearch/Llama-2-7b-hf
 MODEL_NAME=NousResearch/Llama-2-13b-hf
 # MODEL_NAME=NousResearch/Llama-2-70b-hf
-TOKENIZER=${MODEL_NAME}
-# TOKENIZER="hf-internal-testing/llama-tokenizer"
+# TOKENIZER=${MODEL_NAME}
+TOKENIZER="hf-internal-testing/llama-tokenizer"
 # TOKENIZER="meta-llama/Llama-2-7b-chat-hf"
 # MODEL_NAME=meta-llama/Llama-2-7b
 OUTPUT_FILE="latency_llama-2-13b.csv"
@@ -21,10 +21,10 @@ OUTPUT_FILE="latency_llama-2-13b.csv"
 #     --num-prompts 10 \
 #     --trust-remote-code --seed 0
 
-# export 'PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512'
+export RAY_DEDUP_LOGS=0
 
-for i in 1 2 4 8 16 32 64; do
-# for i in 64; do
+for i in 1 2 4 8 16 32 64 128; do
+# for i in 256; do
     echo "Running latency benchmark for batch size ${i}"
     TOKENIZERS_PARALLELISM=true python3 benchmarks/benchmark_latency.py \
         --model $MODEL_NAME \
@@ -36,7 +36,7 @@ for i in 1 2 4 8 16 32 64; do
         --batch-size ${i} \
         --num-iters 3 \
         --trust-remote-code \
-        --gpu-memory-utilization 0.9 \
-        --output-file ${OUTPUT_FILE}
+        --gpu-memory-utilization 0.89 \
+        --output-file ${OUTPUT_FILE} \
+        --use-dummy-weights
 done
-        # --use-dummy-weights \

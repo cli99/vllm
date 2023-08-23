@@ -26,6 +26,7 @@ def main(args: argparse.Namespace):
         use_dummy_weights=args.use_dummy_weights,
         dtype="float16",
         disable_log_stats=False,
+        gpu_memory_utilization=args.gpu_memory_utilization
     )
 
     if args.tensor_parallel_size == 1:
