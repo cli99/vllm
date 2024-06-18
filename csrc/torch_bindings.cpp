@@ -5,6 +5,10 @@
 
 #include <torch/library.h>
 
+#ifndef CUTLASS3X_DEFS
+#define CUTLASS3X_DEFS
+#endif
+
 // Note on op signatures:
 // The X_meta signatures are for the meta functions corresponding to op X.
 // They must be kept in sync with the signature for X. Generally, only
@@ -140,6 +144,9 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
       "                  Tensor b, Tensor a_scales,"
       "                  Tensor b_scales) -> ()");
   ops.impl("cutlass_scaled_mm", torch::kCUDA, &cutlass_scaled_mm);
+
+  // Defined in csrc/quantization/cutlass_w8a8/autogen_cutlass3x_ops.h
+  CUTLASS3X_DEFS
 #endif
 
   // Quantized GEMM for GPTQ.
