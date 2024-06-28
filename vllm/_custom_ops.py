@@ -274,8 +274,9 @@ def gptq_marlin_gemm(a: torch.Tensor, b_q_weight: torch.Tensor,
 # fp8
 def scaled_fp8_quant(
     input: torch.Tensor,
-    scale: Optional[torch.Tensor] = None,
+    scale: Optional[torch.Tensor],
     batch_dim_padding: Optional[int] = None,
+    compute_scale: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Quantize input tensor to FP8 and return quantized tensor and scale.
@@ -303,8 +304,9 @@ def scaled_fp8_quant(
                              dtype=torch.float8_e4m3fn)
     else:
         output = torch.empty_like(input, dtype=torch.float8_e4m3fn)
-    if scale is None:
-        scale = torch.zeros(1, device=input.device, dtype=torch.float32)
+    if compute_scale:
+        if scale is None:
+            scale = torch.zeros(1, device=input.device, dtype=torch.float32)
         torch.ops._C.dynamic_scaled_fp8_quant(output, input, scale)
     else:
         torch.ops._C.static_scaled_fp8_quant(output, input, scale)

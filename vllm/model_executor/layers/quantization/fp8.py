@@ -192,11 +192,11 @@ class Fp8LinearMethod(LinearMethodBase):
         # If checkpoint is fp/bf16 (not serialized fp8), quantize the weights.
         if not self.quant_config.is_checkpoint_fp8_serialized:
             qweight, weight_scale = ops.scaled_fp8_quant(layer.weight,
-                                                         scale=None)
+                                                         scale=None, compute_scale=True)
             layer.weight = Parameter(qweight.t(), requires_grad=False)
             layer.weight_scale = Parameter(weight_scale, requires_grad=False)
             layer.logical_widths = None
-            layer.input_scale = None
+            layer.input_scale = torch.zeros(1, device=layer.weight.device, dtype=torch.float32)
             return
 
         # If checkpoint is fp8, requantize the separately quantized logical
@@ -247,7 +247,7 @@ class Fp8LinearMethod(LinearMethodBase):
         #   If static, layer.input_scale is scalar and x_scale is input_scale.
 
         if bias is None and self.cutlass_fp8_supported:
-            qinput, x_scale = ops.scaled_fp8_quant(x, layer.input_scale)
+            qinput, x_scale = ops.scaled_fp8_quant(x, layer.input_scale, compute_scale=True)
 
             # Fused GEMM_DQ
             output = ops.cutlass_scaled_mm(
